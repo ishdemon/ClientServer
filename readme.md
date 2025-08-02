@@ -38,6 +38,8 @@ This project implements secure inter-process communication (IPC) between two And
 
 ---
 
+##![Sequence Diagram](sequence_diagram.png)
+
 ## Architecture Document
 
 I have used MVVM architecture with flows 
