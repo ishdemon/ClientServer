@@ -1,14 +1,15 @@
 package com.ishdemon.clientapp.ipc
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
+import android.content.*
+import android.content.pm.PackageManager
+import android.os.*
 import com.ishdemon.common.CryptoUtils
 import com.ishdemon.ipc.IEncryptService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.spec.X509EncodedKeySpec
@@ -19,25 +20,66 @@ import javax.inject.Singleton
 class SecureClient @Inject constructor(
     private val cryptoUtils: CryptoUtils
 ) {
+    companion object {
+        private const val MAX_BINDER_SIZE = 512 * 1024 // 0.5MB safe margin
+        private const val SERVER_PACKAGE = "com.ishdemon.serverapp"
+        private const val SERVICE_CLASS = "com.ishdemon.serverapp.SecureService"
+    }
+
     private var service: IEncryptService? = null
     private var bound = false
+    private var clientKeyPair: KeyPair? = null
+    private var contextRef: WeakReference<Context> = WeakReference(null)
+
+    private val _isBound = MutableStateFlow(false)
+    val isBound: StateFlow<Boolean> = _isBound
+
+    fun initKeys() {
+        clientKeyPair = cryptoUtils.generateKeyPair()
+    }
+
+    private fun isServerAppInstalled(context: Context): Boolean {
+        return try {
+            context.packageManager.getPackageInfo(SERVER_PACKAGE, 0)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
 
     private val conn = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = IEncryptService.Stub.asInterface(binder)
             bound = true
+            _isBound.value = true
+
+            // Watch for binder death
+            binder?.linkToDeath({
+                _isBound.value = false
+                bound = false
+                service = null
+                // Try auto-rebind
+                Handler(Looper.getMainLooper()).postDelayed({
+                    bind(contextRef.get() ?: return@postDelayed)
+                }, 2000)
+            }, 0)
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             bound = false
             service = null
+            _isBound.value = false
         }
     }
 
     fun bind(context: Context) {
+        if (!isServerAppInstalled(context)) {
+            // Could notify ViewModel/UI here
+            return
+        }
+        contextRef = WeakReference(context)
         val intent = Intent().apply {
-            component =
-                ComponentName("com.ishdemon.serverapp", "com.ishdemon.serverapp.SecureService")
+            component = ComponentName(SERVER_PACKAGE, SERVICE_CLASS)
             action = "AIDL_BIND"
         }
         context.bindService(intent, conn, Context.BIND_AUTO_CREATE)
@@ -47,24 +89,28 @@ class SecureClient @Inject constructor(
         if (bound) {
             context.unbindService(conn)
             bound = false
+            _isBound.value = false
         }
-    }
-
-    private lateinit var clientKeyPair: KeyPair
-
-    fun initKeys() {
-        clientKeyPair = cryptoUtils.generateKeyPair()
     }
 
     suspend fun sendData(data: String): String? = withContext(Dispatchers.IO) {
         val serverPubKeyBytes = service?.publicKey ?: return@withContext null
         val serverPublicKey = KeyFactory.getInstance("RSA")
             .generatePublic(X509EncodedKeySpec(serverPubKeyBytes))
+
         val encryptedData = cryptoUtils.encrypt(data.toByteArray(), serverPublicKey)
-        val encryptedResponse = service?.processData(encryptedData, clientKeyPair.public.encoded)
-            ?: return@withContext null
-        val decryptedResponse = cryptoUtils.decrypt(encryptedResponse, clientKeyPair.private)
+
+        // Binder size check
+        if (encryptedData.size > MAX_BINDER_SIZE) {
+            throw IllegalArgumentException("Payload exceeds Binder size limit")
+        }
+
+        val encryptedResponse = service?.processData(
+            encryptedData,
+            clientKeyPair?.public?.encoded
+        ) ?: return@withContext null
+
+        val decryptedResponse = cryptoUtils.decrypt(encryptedResponse, clientKeyPair!!.private)
         return@withContext decryptedResponse.decodeToString()
     }
-
 }

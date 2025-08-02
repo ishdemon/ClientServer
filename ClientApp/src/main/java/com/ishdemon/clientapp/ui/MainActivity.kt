@@ -1,6 +1,7 @@
 package com.ishdemon.clientapp.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -9,6 +10,7 @@ import com.ishdemon.clientapp.viewmodel.SecureViewModel
 import com.ishdemon.clientapp.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -25,6 +27,15 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launchWhenStarted {
             viewModel.tokenFlow.collectLatest { token ->
                 token?.let { binding.tvRecieved.text = it }
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.isBound.collectLatest { bound ->
+                if(!bound)
+                    Toast.makeText(this@MainActivity,"ServerApp not connected or uninstalled", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(this@MainActivity,"ServerApp connected", Toast.LENGTH_SHORT).show()
+                binding.btnSendSecureData.isEnabled = bound
             }
         }
 

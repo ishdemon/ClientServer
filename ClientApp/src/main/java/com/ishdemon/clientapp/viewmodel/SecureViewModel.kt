@@ -23,10 +23,13 @@ class SecureViewModel @Inject constructor(
     private val _pushFlow = MutableStateFlow<String?>(null)
     val pushFlow: StateFlow<String?> = _pushFlow
 
+    val isBound: StateFlow<Boolean> get() = secureClient.isBound
+
     fun bindServices(context: Context) {
         secureClient.initKeys()
         secureClient.bind(context)
         pushClient.bind(context)
+
         viewModelScope.launch {
             pushClient.pushMessages.collect { msg ->
                 _pushFlow.emit(msg)
@@ -42,7 +45,11 @@ class SecureViewModel @Inject constructor(
     fun sendSecureData(data: String) {
         viewModelScope.launch {
             val token = secureClient.sendData(data)
-            _tokenFlow.emit(token)
+            if (token != null) {
+                _tokenFlow.emit(token)
+            } else {
+                _tokenFlow.emit("Error: No response or ServerApp not connected")
+            }
         }
     }
 }
