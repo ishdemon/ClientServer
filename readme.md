@@ -36,7 +36,16 @@ This project implements secure inter-process communication (IPC) between two And
 5. Client decrypts the response with its private key.
 6. Server sends a delayed push message via Messenger.
 
----
++-------------+                               +-------------+
+|  ClientApp  |                               |  ServerApp  |
++-------------+                               +-------------+
+           |-- bind Messenger -------------------->|
+           |   send replyTo Messenger reference    |
+       |                                                |
+       |                        pushMessageToClient() --|
+       | <-- Messenger message -------------------------|
+       |   handleMessage(): update UI                   |
+
 
 ##![Sequence Diagram](sequence_diagram.png)
 
