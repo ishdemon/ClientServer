@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -33,10 +35,14 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    buildFeatures.aidl = true
+    buildFeatures.viewBinding = true
+    sourceSets["main"].aidl.srcDirs("src/main/aidl")
 }
 
 dependencies {
 
+    implementation(libs.kotlin.stdlib)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -45,4 +51,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    ksp(libs.hiltAndroidCompiler)
+    implementation(project(":aidlModule"))
 }

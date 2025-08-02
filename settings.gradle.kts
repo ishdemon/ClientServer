@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ClientServer"
 include(":ClientApp", ":ServerApp")
-include(":serverapp")
+include(":aidlModule")
