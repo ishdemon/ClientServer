@@ -39,11 +39,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-//        lifecycleScope.launchWhenStarted {
-//            viewModel.pushFlow.collectLatest { push ->
-//                push?.let { binding.btnSendSecureData.text = "Push: $it" }
-//            }
-//        }
+        lifecycleScope.launchWhenStarted {
+            viewModel.pushFlow.collectLatest { push ->
+                push?.let { binding.tvRecieved.append("\nPush: $it") }
+            }
+        }
 
         binding.btnSendSecureData.setOnClickListener {
             binding.tvSent.text = binding.editText.text.toString()
