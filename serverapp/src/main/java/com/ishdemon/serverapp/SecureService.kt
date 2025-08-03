@@ -37,6 +37,7 @@ class SecureService : Service() {
 
         override fun processData(encryptedData: ByteArray, clientPublicKeyBytes: ByteArray): ByteArray {
             if (encryptedData.size > MAX_BINDER_SIZE) {
+                pushMessageToClient("Payload exceeds Binder size limit")
                 throw IllegalArgumentException("Payload exceeds Binder size limit")
             }
 
@@ -45,6 +46,7 @@ class SecureService : Service() {
 
             val clientPublicKey = KeyFactory.getInstance("RSA")
                 .generatePublic(X509EncodedKeySpec(clientPublicKeyBytes))
+            pushMessageToClient("Encrypting..")
 
             return cryptoUtils.encrypt(processed.toByteArray(), clientPublicKey)
         }

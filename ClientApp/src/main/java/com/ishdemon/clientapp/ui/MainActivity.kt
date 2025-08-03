@@ -32,10 +32,16 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             viewModel.isBound.collectLatest { bound ->
-                if(!bound)
-                    Toast.makeText(this@MainActivity,"ServerApp not connected or uninstalled", Toast.LENGTH_SHORT).show()
-                else Toast.makeText(this@MainActivity,"ServerApp connected", Toast.LENGTH_SHORT).show()
+                if(bound)
+                    Toast.makeText(this@MainActivity,"ServerApp connected", Toast.LENGTH_SHORT).show()
                 binding.btnSendSecureData.isEnabled = bound
+            }
+        }
+        lifecycleScope.launch {
+            viewModel.isInstalled.collectLatest { isInstalled ->
+                if(isInstalled == false){
+                    Toast.makeText(this@MainActivity,"ServerApp is not installed. Please Install the server app first", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 

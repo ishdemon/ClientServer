@@ -10,21 +10,23 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PushClient @Inject constructor() {
     private var bound = false
-    private val _pushMessages = MutableSharedFlow<String>()
-    val pushMessages: SharedFlow<String> = _pushMessages
+    private val _pushMessages = MutableStateFlow<String>("")
+    val pushMessages: StateFlow<String> = _pushMessages
 
     private val incomingMessenger = Messenger(object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             if (msg.what == 2) {
                 val text = msg.data.getString("message") ?: ""
-                _pushMessages.tryEmit(text)
+                _pushMessages.value = text
             }
         }
     })

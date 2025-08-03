@@ -34,6 +34,9 @@ class SecureClient @Inject constructor(
     private val _isBound = MutableStateFlow(false)
     val isBound: StateFlow<Boolean> = _isBound
 
+    private val _isInstalled = MutableStateFlow<Boolean?>(null)
+    val isInstalled: StateFlow<Boolean?> = _isInstalled
+
     fun initKeys() {
         clientKeyPair = cryptoUtils.generateKeyPair()
     }
@@ -53,7 +56,6 @@ class SecureClient @Inject constructor(
             bound = true
             _isBound.value = true
 
-            // Watch for binder death
             binder?.linkToDeath({
                 _isBound.value = false
                 bound = false
@@ -74,9 +76,9 @@ class SecureClient @Inject constructor(
 
     fun bind(context: Context) {
         if (!isServerAppInstalled(context)) {
-            // Could notify ViewModel/UI here
+            _isInstalled.value = false
             return
-        }
+        } else _isInstalled.value = true
         contextRef = WeakReference(context)
         val intent = Intent().apply {
             component = ComponentName(SERVER_PACKAGE, SERVICE_CLASS)

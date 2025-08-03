@@ -25,6 +25,8 @@ class SecureViewModel @Inject constructor(
 
     val isBound: StateFlow<Boolean> get() = secureClient.isBound
 
+    val isInstalled: StateFlow<Boolean?> get() = secureClient.isInstalled
+
     fun bindServices(context: Context) {
         secureClient.initKeys()
         secureClient.bind(context)
